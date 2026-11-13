@@ -1,6 +1,0 @@
-{
-  "name": "MUDO – Premium Multiplayer Ludo Web Game",
-  "description": "A Better Way to Play Ludo. Developed & Copyrighted by MUBIX. Featuring Offline, Quick Match, Friendly Private Rooms, and Smart AI.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
