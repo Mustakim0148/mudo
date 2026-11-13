@@ -1,0 +1,392 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn();
+    }
+
+    function isValidQueueEntry(data) {
+      return data.keys().hasAll([
+          'playerId', 'authUid', 'playerName', 'targetCount',
+          'status', 'gameId', 'expiresAt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'playerId', 'authUid', 'playerName', 'targetCount',
+          'status', 'gameId', 'expiresAt', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.playerId) && data.playerId.size() <= 80
+        && isValidId(data.authUid)
+        && data.playerName is string && data.playerName.size() >= 1 && data.playerName.size() <= 24
+        && (data.targetCount == 2 || data.targetCount == 4)
+        && (data.status == 'waiting' || data.status == 'matched')
+        && (data.gameId == null || isValidId(data.gameId))
+        && data.expiresAt is int
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidRoom(data) {
+      return data.keys().hasAll([
+          'roomId', 'code', 'hostId', 'hostAuthUid', 'maxPlayers',
+          'currentPlayerCount', 'players', 'assignedColors',
+          'participantAuthUids', 'status', 'gameId', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'roomId', 'code', 'hostId', 'hostAuthUid', 'maxPlayers',
+          'currentPlayerCount', 'players', 'assignedColors',
+          'participantAuthUids', 'status', 'gameId', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.roomId) && data.roomId.size() <= 80
+        && data.code is string && data.code.size() == 9 && data.code.matches('^MUDO-[A-Z0-9]{4}$')
+        && isValidId(data.hostId) && data.hostId.size() <= 80
+        && isValidId(data.hostAuthUid)
+        && (data.maxPlayers == 2 || data.maxPlayers == 3 || data.maxPlayers == 4)
+        && data.currentPlayerCount is int && data.currentPlayerCount >= 0 && data.currentPlayerCount <= data.maxPlayers
+        && data.players is list && data.players.size() <= 4
+        && (data.players.size() == 0 || data.players[0] is map)
+        && data.assignedColors is list && data.assignedColors.size() <= 4
+        && (data.assignedColors.size() == 0 || data.assignedColors[0] is string)
+        && data.participantAuthUids is list && data.participantAuthUids.size() <= 4
+        && (data.participantAuthUids.size() == 0 || data.participantAuthUids[0] is string)
+        && (data.status == 'waiting' || data.status == 'in_game' || data.status == 'disbanded')
+        && (data.gameId == null || isValidId(data.gameId))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidGame(data) {
+      return data.keys().hasAll([
+          'gameId', 'mode', 'playerCount', 'players', 'participantAuthUids',
+          'currentTurnIndex', 'diceValue', 'isRolling', 'hasRolled', 'validMoves',
+          'consecutiveSixes', 'status', 'winners', 'winner', 'lastAction', 'history',
+          'roomCode', 'turnTimeout', 'turnId', 'currentPlayerId', 'turnPhase',
+          'turnStartedAt', 'diceDeadline', 'tokenDeadline', 'isAutoMoving',
+          'lastMove', 'roomDisbanded', 'disbandReason', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'gameId', 'mode', 'playerCount', 'players', 'participantAuthUids',
+          'currentTurnIndex', 'diceValue', 'isRolling', 'hasRolled', 'validMoves',
+          'consecutiveSixes', 'status', 'winners', 'winner', 'lastAction', 'history',
+          'roomCode', 'turnTimeout', 'turnId', 'currentPlayerId', 'turnPhase',
+          'turnStartedAt', 'diceDeadline', 'tokenDeadline', 'isAutoMoving',
+          'lastMove', 'roomDisbanded', 'disbandReason', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.gameId)
+        && (data.mode == 'quick_match' || data.mode == 'friendly')
+        && (data.playerCount == 2 || data.playerCount == 3 || data.playerCount == 4)
+        && data.players is list && data.players.size() == data.playerCount
+        && data.players[0] is map
+        && data.participantAuthUids is list && data.participantAuthUids.size() >= 1 && data.participantAuthUids.size() <= 4
+        && data.participantAuthUids[0] is string
+        && data.currentTurnIndex is int && data.currentTurnIndex >= 0 && data.currentTurnIndex < data.playerCount
+        && (data.diceValue == null || (data.diceValue is int && data.diceValue >= 1 && data.diceValue <= 6))
+        && data.isRolling is bool
+        && data.hasRolled is bool
+        && data.validMoves is list && data.validMoves.size() <= 4
+        && (data.validMoves.size() == 0 || data.validMoves[0] is int)
+        && data.consecutiveSixes is int && data.consecutiveSixes >= 0 && data.consecutiveSixes <= 3
+        && (data.status == 'playing' || data.status == 'ended' || data.status == 'disbanded')
+        && data.winners is list && data.winners.size() <= 4
+        && (data.winners.size() == 0 || data.winners[0] is string)
+        && (data.winner == null || (data.winner is string && data.winner.size() <= 16))
+        && data.lastAction is string && data.lastAction.size() <= 300
+        && data.history is list && data.history.size() <= 25
+        && (data.history.size() == 0 || data.history[0] is string)
+        && (data.roomCode == null || (data.roomCode is string && data.roomCode.size() <= 16))
+        && data.turnTimeout is int && data.turnTimeout > 0
+        && data.turnId is string && data.turnId.size() >= 1 && data.turnId.size() <= 128
+        && isValidId(data.currentPlayerId) && data.currentPlayerId.size() <= 80
+        && (data.turnPhase == 'roll' || data.turnPhase == 'move' || data.turnPhase == 'done')
+        && data.turnStartedAt is int
+        && (data.diceDeadline == null || data.diceDeadline is int)
+        && (data.tokenDeadline == null || data.tokenDeadline is int)
+        && data.isAutoMoving is bool
+        && (data.lastMove == null || (
+          data.lastMove is map
+          && data.lastMove.keys().hasAll(['moveId', 'playerId', 'color', 'tokenId', 'fromStep', 'toStep', 'capturedTokens', 'reachedHome'])
+        ))
+        && data.roomDisbanded is bool
+        && (data.disbandReason == null || (data.disbandReason is string && data.disbandReason.size() <= 300))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPresence(data) {
+      return data.keys().hasAll(['playerId', 'authUid', 'lastSeen'])
+        && data.keys().hasOnly(['playerId', 'authUid', 'lastSeen'])
+        && isValidId(data.playerId) && data.playerId.size() <= 80
+        && isValidId(data.authUid)
+        && data.lastSeen is timestamp;
+    }
+
+    // Boot connectivity check doc
+    match /test/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list, create, update, delete: if false;
+    }
+
+    // Server clock calibration doc (per user)
+    match /mudo_clock/{uid} {
+      allow get: if isVerifiedUser() && isValidId(uid) && uid == request.auth.uid;
+      allow list: if false;
+      allow create, update: if isVerifiedUser()
+        && isValidId(uid)
+        && uid == request.auth.uid
+        && incoming().keys().hasAll(['uid', 't'])
+        && incoming().keys().hasOnly(['uid', 't'])
+        && incoming().uid == request.auth.uid
+        && incoming().t == request.time;
+      allow delete: if isVerifiedUser() && isValidId(uid) && uid == request.auth.uid;
+    }
+
+    // Quick Match matchmaking queues
+    match /mudo_queues/{entryId} {
+      allow get: if isVerifiedUser() && isValidId(entryId);
+      allow list: if isVerifiedUser()
+        && resource.data.status == 'waiting'
+        && (resource.data.targetCount == 2 || resource.data.targetCount == 4);
+
+      allow create: if isVerifiedUser()
+        && isValidId(entryId)
+        && isValidQueueEntry(incoming())
+        && incoming().playerId == entryId
+        && incoming().authUid == request.auth.uid
+        && incoming().status == 'waiting'
+        && incoming().gameId == null
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser()
+        && isValidId(entryId)
+        && isValidQueueEntry(incoming())
+        && incoming().playerId == existing().playerId
+        && incoming().authUid == existing().authUid
+        && incoming().targetCount == existing().targetCount
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Owner heartbeat / queue refresh
+          (
+            existing().authUid == request.auth.uid
+            && existing().status == 'waiting'
+            && incoming().status == 'waiting'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['expiresAt', 'playerName', 'updatedAt'])
+          )
+          ||
+          // Action 2: Atomic match creation binding queue entry to new game with this player included
+          (
+            existing().status == 'waiting'
+            && incoming().status == 'matched'
+            && incoming().gameId is string
+            && isValidId(incoming().gameId)
+            && existsAfter(/databases/$(database)/documents/mudo_games/$(incoming().gameId))
+            && (existing().authUid in getAfter(/databases/$(database)/documents/mudo_games/$(incoming().gameId)).data.participantAuthUids)
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'gameId', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isVerifiedUser()
+        && isValidId(entryId)
+        && (existing().authUid == request.auth.uid || existing().expiresAt < request.time.toMillis());
+    }
+
+    // Friendly Mode private rooms
+    match /mudo_rooms/{roomCode} {
+      allow get: if isVerifiedUser() && isValidId(roomCode);
+      allow list: if false;
+
+      allow create: if isVerifiedUser()
+        && isValidId(roomCode)
+        && isValidRoom(incoming())
+        && incoming().code == roomCode
+        && incoming().hostAuthUid == request.auth.uid
+        && incoming().status == 'waiting'
+        && incoming().gameId == null
+        && incoming().currentPlayerCount == 1
+        && incoming().players.size() == 1
+        && incoming().assignedColors.size() == 1
+        && incoming().participantAuthUids.size() == 1
+        && incoming().participantAuthUids[0] == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser()
+        && isValidId(roomCode)
+        && isValidRoom(incoming())
+        && existing().status != 'disbanded'
+        && incoming().roomId == existing().roomId
+        && incoming().code == existing().code
+        && incoming().maxPlayers == existing().maxPlayers
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Join waiting room (remains waiting, preserves existing participants)
+          (
+            existing().status == 'waiting'
+            && incoming().status == 'waiting'
+            && incoming().gameId == null
+            && incoming().players.size() == existing().players.size() + 1
+            && incoming().players.size() < existing().maxPlayers
+            && incoming().currentPlayerCount == incoming().players.size()
+            && incoming().participantAuthUids.hasAll(existing().participantAuthUids)
+            && (request.auth.uid in incoming().participantAuthUids)
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'players', 'currentPlayerCount', 'assignedColors', 'participantAuthUids', 'updatedAt'
+            ])
+          )
+          ||
+          // Action 2: Final player joins & atomically launches game
+          (
+            existing().status == 'waiting'
+            && incoming().status == 'in_game'
+            && incoming().gameId is string
+            && isValidId(incoming().gameId)
+            && existsAfter(/databases/$(database)/documents/mudo_games/$(incoming().gameId))
+            && incoming().players.size() == existing().maxPlayers
+            && incoming().currentPlayerCount == existing().maxPlayers
+            && incoming().participantAuthUids.hasAll(existing().participantAuthUids)
+            && (request.auth.uid in incoming().participantAuthUids)
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'players', 'currentPlayerCount', 'assignedColors', 'participantAuthUids', 'status', 'gameId', 'updatedAt'
+            ])
+          )
+          ||
+          // Action 3: Participant leaves waiting lobby
+          (
+            existing().status == 'waiting'
+            && (request.auth.uid in existing().participantAuthUids)
+            && (incoming().status == 'waiting' || incoming().status == 'disbanded')
+            && incoming().currentPlayerCount == incoming().players.size()
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'players', 'currentPlayerCount', 'assignedColors', 'participantAuthUids',
+              'hostId', 'hostAuthUid', 'status', 'updatedAt'
+            ])
+          )
+          ||
+          // Action 4: Disband active room when match disbands
+          (
+            existing().status == 'in_game'
+            && incoming().status == 'disbanded'
+            && (request.auth.uid in existing().participantAuthUids)
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'status', 'players', 'currentPlayerCount', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    // Active Online Multiplayer Matches
+    match /mudo_games/{gameId} {
+      allow get: if isVerifiedUser()
+        && isValidId(gameId)
+        && (request.auth.uid in existing().participantAuthUids);
+
+      allow list: if isVerifiedUser()
+        && (request.auth.uid in resource.data.participantAuthUids);
+
+      allow create: if isVerifiedUser()
+        && isValidId(gameId)
+        && isValidGame(incoming())
+        && incoming().gameId == gameId
+        && (request.auth.uid in incoming().participantAuthUids)
+        && incoming().status == 'playing'
+        && incoming().roomDisbanded == false
+        && incoming().disbandReason == null
+        && incoming().lastMove == null
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          incoming().mode == 'quick_match'
+          || (
+            incoming().mode == 'friendly'
+            && incoming().roomCode is string
+            && exists(/databases/$(database)/documents/mudo_rooms/$(incoming().roomCode))
+            && getAfter(/databases/$(database)/documents/mudo_rooms/$(incoming().roomCode)).data.status == 'in_game'
+            && getAfter(/databases/$(database)/documents/mudo_rooms/$(incoming().roomCode)).data.gameId == gameId
+          )
+        );
+
+      allow update: if isVerifiedUser()
+        && isValidId(gameId)
+        && isValidGame(incoming())
+        && (request.auth.uid in existing().participantAuthUids)
+        && existing().status == 'playing'
+        && incoming().gameId == existing().gameId
+        && incoming().mode == existing().mode
+        && incoming().playerCount == existing().playerCount
+        && incoming().participantAuthUids == existing().participantAuthUids
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Gameplay turn roll / token move / timeout advancement
+          (
+            (incoming().status == 'playing' || incoming().status == 'ended')
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'players', 'currentTurnIndex', 'diceValue', 'hasRolled', 'validMoves',
+              'consecutiveSixes', 'status', 'winners', 'winner', 'lastAction', 'history',
+              'turnId', 'currentPlayerId', 'turnPhase', 'turnStartedAt',
+              'diceDeadline', 'tokenDeadline', 'isAutoMoving', 'lastMove', 'updatedAt'
+            ])
+          )
+          ||
+          // Action 2: Player leave / confirmed disconnect / room disband
+          (
+            (incoming().status == 'playing' || incoming().status == 'disbanded')
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'players', 'currentTurnIndex', 'diceValue', 'hasRolled', 'validMoves',
+              'consecutiveSixes', 'status', 'lastAction', 'history',
+              'turnId', 'currentPlayerId', 'turnPhase', 'turnStartedAt',
+              'diceDeadline', 'tokenDeadline', 'isAutoMoving',
+              'roomDisbanded', 'disbandReason', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if false;
+
+      // Presence heartbeat subcollection gated by parent game participants
+      match /presence/{playerId} {
+        allow get: if isVerifiedUser()
+          && isValidId(gameId)
+          && isValidId(playerId)
+          && (request.auth.uid in get(/databases/$(database)/documents/mudo_games/$(gameId)).data.participantAuthUids);
+
+        allow list: if false;
+
+        allow create, update: if isVerifiedUser()
+          && isValidId(gameId)
+          && isValidId(playerId)
+          && isValidPresence(incoming())
+          && incoming().playerId == playerId
+          && incoming().authUid == request.auth.uid
+          && incoming().lastSeen == request.time
+          && (request.auth.uid in get(/databases/$(database)/documents/mudo_games/$(gameId)).data.participantAuthUids);
+
+        allow delete: if false;
+      }
+    }
+  }
+}

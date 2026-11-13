@@ -1,0 +1,372 @@
+{
+  "entities": {
+    "TestConnection": {
+      "title": "TestConnection",
+      "description": "Lightweight read-only document used on app startup to verify Firestore server connectivity.",
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "description": "Connection health flag"
+        }
+      }
+    },
+    "ClockPing": {
+      "title": "ClockPing",
+      "description": "Per-user server timestamp calibration document to synchronize 15-second turn timers across devices.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "t": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp"
+        }
+      },
+      "required": ["uid", "t"]
+    },
+    "QueueEntry": {
+      "title": "QueueEntry",
+      "description": "Matchmaking queue entry for 2-player or 4-player Quick Match.",
+      "type": "object",
+      "properties": {
+        "playerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "playerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "targetCount": {
+          "type": "integer",
+          "enum": [2, 4]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "matched"]
+        },
+        "gameId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "expiresAt": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "playerId",
+        "authUid",
+        "playerName",
+        "targetCount",
+        "status",
+        "expiresAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Room": {
+      "title": "Room",
+      "description": "Friendly Mode private room synchronized across devices.",
+      "type": "object",
+      "properties": {
+        "roomId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 9,
+          "maxLength": 9,
+          "pattern": "^MUDO-[A-Z0-9]{4}$"
+        },
+        "hostId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "hostAuthUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "maxPlayers": {
+          "type": "integer",
+          "enum": [2, 3, 4]
+        },
+        "currentPlayerCount": {
+          "type": "integer"
+        },
+        "players": {
+          "type": "array"
+        },
+        "assignedColors": {
+          "type": "array"
+        },
+        "participantAuthUids": {
+          "type": "array"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "in_game", "disbanded"]
+        },
+        "gameId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "roomId",
+        "code",
+        "hostId",
+        "hostAuthUid",
+        "maxPlayers",
+        "currentPlayerCount",
+        "players",
+        "assignedColors",
+        "participantAuthUids",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Game": {
+      "title": "Game",
+      "description": "Synchronized online multiplayer Ludo match state.",
+      "type": "object",
+      "properties": {
+        "gameId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["quick_match", "friendly"]
+        },
+        "playerCount": {
+          "type": "integer",
+          "enum": [2, 3, 4]
+        },
+        "players": {
+          "type": "array"
+        },
+        "participantAuthUids": {
+          "type": "array"
+        },
+        "currentTurnIndex": {
+          "type": "integer"
+        },
+        "diceValue": {
+          "type": "integer"
+        },
+        "isRolling": {
+          "type": "boolean"
+        },
+        "hasRolled": {
+          "type": "boolean"
+        },
+        "validMoves": {
+          "type": "array"
+        },
+        "consecutiveSixes": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["playing", "ended", "disbanded"]
+        },
+        "winners": {
+          "type": "array"
+        },
+        "winner": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "lastAction": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "history": {
+          "type": "array"
+        },
+        "roomCode": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "turnTimeout": {
+          "type": "integer"
+        },
+        "turnId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "currentPlayerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "turnPhase": {
+          "type": "string",
+          "enum": ["roll", "move", "done"]
+        },
+        "turnStartedAt": {
+          "type": "integer"
+        },
+        "diceDeadline": {
+          "type": "integer"
+        },
+        "tokenDeadline": {
+          "type": "integer"
+        },
+        "isAutoMoving": {
+          "type": "boolean"
+        },
+        "lastMove": {
+          "type": "object"
+        },
+        "roomDisbanded": {
+          "type": "boolean"
+        },
+        "disbandReason": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "gameId",
+        "mode",
+        "playerCount",
+        "players",
+        "participantAuthUids",
+        "currentTurnIndex",
+        "isRolling",
+        "hasRolled",
+        "validMoves",
+        "consecutiveSixes",
+        "status",
+        "winners",
+        "lastAction",
+        "history",
+        "turnId",
+        "currentPlayerId",
+        "turnPhase",
+        "turnStartedAt",
+        "isAutoMoving",
+        "roomDisbanded",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "GamePresence": {
+      "title": "GamePresence",
+      "description": "Per-player heartbeat timestamp in an active online match for disconnect detection.",
+      "type": "object",
+      "properties": {
+        "playerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["playerId", "authUid", "lastSeen"]
+    }
+  },
+  "firestore": {
+    "/test/{docId}": {
+      "schema": {
+        "$ref": "#/entities/TestConnection"
+      },
+      "description": "Firestore connectivity check document."
+    },
+    "/mudo_clock/{uid}": {
+      "schema": {
+        "$ref": "#/entities/ClockPing"
+      },
+      "description": "Per-user server time offset calibration document."
+    },
+    "/mudo_queues/{entryId}": {
+      "schema": {
+        "$ref": "#/entities/QueueEntry"
+      },
+      "description": "Quick Match queue entries separated by targetCount (2 or 4)."
+    },
+    "/mudo_rooms/{roomCode}": {
+      "schema": {
+        "$ref": "#/entities/Room"
+      },
+      "description": "Friendly Mode private rooms indexed by normalized room code."
+    },
+    "/mudo_games/{gameId}": {
+      "schema": {
+        "$ref": "#/entities/Game"
+      },
+      "description": "Active online multiplayer Ludo game state."
+    },
+    "/mudo_games/{gameId}/presence/{playerId}": {
+      "schema": {
+        "$ref": "#/entities/GamePresence"
+      },
+      "description": "Player heartbeat presence inside an active match."
+    }
+  }
+}
